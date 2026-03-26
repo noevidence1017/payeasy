@@ -1,6 +1,10 @@
 #![no_std]
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Map};
 
+/// Number of ledgers in a day, assuming ~5-second ledger close times
+/// (24 * 60 * 60) / 5 = 17280
+pub const DAY_IN_LEDGERS: u32 = 17280;
+
 //RentEscrow defined already
 #[contracttype]
 #[derive(Clone)]
