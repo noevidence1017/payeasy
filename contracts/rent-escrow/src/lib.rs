@@ -1,6 +1,10 @@
 ﻿#![no_std]
 use soroban_sdk::{contract, contractimpl, contracttype, contracterror, Address, Env, Map};
 
+/// Minimum rent amount in stroops/token-units to prevent micro-escrow spam
+pub const MIN_RENT: i128 = 100;
+
+//RentEscrow defined already
 /// Error types for the rent escrow contract.
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
