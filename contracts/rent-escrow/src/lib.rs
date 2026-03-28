@@ -15,6 +15,10 @@ pub const DAY_IN_LEDGERS: u32 = 17280;
 pub enum Error {
     InvalidAmount = 1,
     InsufficientFunding = 2,
+    /// Caller is not a registered roommate in this escrow.
+    Unauthorized = 3,
+    /// Refunds are not available until the deadline has passed.
+    DeadlineNotReached = 4,
 }
 
 /// Storage key definitions for persistent contract state.
@@ -24,6 +28,7 @@ pub enum Error {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DataKey {
     Escrow,
+    Deadline,
 }
 
 #[contracttype]
@@ -55,6 +60,7 @@ impl RentEscrowContract {
         env: Env,
         landlord: Address,
         rent_amount: i128,
+        deadline: u64,
         roommates: Map<Address, i128>,
     ) -> Result<(), Error> {
         landlord.require_auth();
@@ -77,6 +83,44 @@ impl RentEscrowContract {
             roommates: roommate_states,
         });
 
+        env.storage().persistent().set(&DataKey::Deadline, &deadline);
+
+        Ok(())
+    }
+
+    /// Allows the landlord to register a new roommate and their expected share.
+    ///
+    /// Only the landlord may call this. Reverts with `Unauthorized` if anyone
+    /// else attempts to add a roommate.
+    pub fn add_roommate(
+        env: Env,
+        landlord: Address,
+        user: Address,
+        share: i128,
+    ) -> Result<(), Error> {
+        landlord.require_auth();
+
+        if share <= 0 {
+            return Err(Error::InvalidAmount);
+        }
+
+        let mut escrow: RentEscrow = env.storage()
+            .persistent()
+            .get(&DataKey::Escrow)
+            .expect("escrow not initialized");
+
+        // Only the stored landlord is authorised to modify the roommate list.
+        if escrow.landlord != landlord {
+            return Err(Error::Unauthorized);
+        }
+
+        escrow.roommates.set(user, RoommateState {
+            expected: share,
+            paid: 0,
+        });
+
+        env.storage().persistent().set(&DataKey::Escrow, &escrow);
+
         Ok(())
     }
 
@@ -93,7 +137,12 @@ impl RentEscrowContract {
             .get(&DataKey::Escrow)
             .expect("escrow not initialized");
 
-        let mut state = escrow.roommates.get(from.clone()).ok_or(Error::InvalidAmount)?;
+        // Verify the caller is a registered roommate before accepting any funds.
+        if !escrow.roommates.contains_key(from.clone()) {
+            return Err(Error::Unauthorized);
+        }
+
+        let mut state = escrow.roommates.get(from.clone()).unwrap();
         state.paid += amount;
         escrow.roommates.set(from.clone(), state);
 
@@ -128,19 +177,17 @@ impl RentEscrowContract {
     }
 
     /// Release total rent to the landlord if fully funded.
+    ///
+    /// Guard: delegates to `is_fully_funded` at the start of the function.
+    /// Any call made before all roommates have met the rent target is
+    /// rejected with `Error::InsufficientFunding`, preventing premature payout.
     pub fn release(env: Env) -> Result<(), Error> {
-        let total_contributed = Self::get_total_funded(env.clone());
-
-        let escrow: RentEscrow = env.storage()
-            .persistent()
-            .get(&DataKey::Escrow)
-            .expect("escrow not initialized");
-
-        if total_contributed < escrow.rent_amount {
+        // Guard: must be fully funded before any payout can occur.
+        if !Self::is_fully_funded(env.clone()) {
             return Err(Error::InsufficientFunding);
         }
 
-        // TODO: Transfer total_contributed tokens to escrow.landlord
+        // TODO: Transfer collected rent tokens to escrow.landlord
 
         Ok(())
     }
@@ -178,6 +225,42 @@ impl RentEscrowContract {
             Some(state) => state.paid,
             None => 0,
         }
+    }
+
+    /// Retrieve the deadline timestamp from persistent storage.
+    pub fn get_deadline(env: Env) -> u64 {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Deadline)
+            .expect("escrow not initialized")
+    }
+
+    /// Implement function for individual roommates to reclaim deposits.
+    /// Reverts if called before the deadline.
+    pub fn claim_refund(env: Env, from: Address) -> Result<(), Error> {
+        from.require_auth();
+
+        let deadline: u64 = env.storage()
+            .persistent()
+            .get(&DataKey::Deadline)
+            .expect("escrow not initialized");
+
+        if env.ledger().timestamp() < deadline {
+            return Err(Error::DeadlineNotReached);
+        }
+
+        let escrow: RentEscrow = env.storage()
+            .persistent()
+            .get(&DataKey::Escrow)
+            .expect("escrow not initialized");
+
+        if !escrow.roommates.contains_key(from.clone()) {
+            return Err(Error::Unauthorized);
+        }
+
+        // Logic to transfer token back to user will be added here
+        
+        Ok(())
     }
 }
 
