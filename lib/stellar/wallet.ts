@@ -1,8 +1,12 @@
-import freighterApi from "@stellar/freighter-api";
+import {
+  isConnected,
+  isAllowed,
+  setAllowed,
+  requestAccess,
+  getAddress,
+  signTransaction,
+} from "@stellar/freighter-api";
 import { getCurrentNetwork } from "./config.ts";
-
-const { isConnected, isAllowed, setAllowed, requestAccess, getAddress, signTransaction } =
-  freighterApi;
 
 /**
  * Checks if the Freighter extension is installed in the browser.

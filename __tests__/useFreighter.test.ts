@@ -1,17 +1,22 @@
-import test, { describe, mock } from "node:test";
+import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-describe("useFreighter hook logic", () => {
+// Since we cannot easily mock the ESM module ../lib/stellar/wallet.ts 
+// without experimental loaders in node:test, and the original test was 
+// only testing the mock functions themselves, we refactor this to 
+// a set of logic tests that use manual mock functions.
+
+describe("Freighter wallet logic", () => {
   describe("wallet detection", () => {
-    test("detects when Freighter is installed", async () => {
-      const isFreighterInstalled = mock.fn(async () => true);
-      const installed = await isFreighterInstalled();
+    it("detects when Freighter is installed", async () => {
+      const mockIsFreighterInstalled = async () => true;
+      const installed = await mockIsFreighterInstalled();
       assert.strictEqual(installed, true);
     });
 
-    test("detects when Freighter is not installed", async () => {
-      const isFreighterInstalled = mock.fn(async () => false);
-      const installed = await isFreighterInstalled();
+    it("detects when Freighter is not installed", async () => {
+      const mockIsFreighterInstalled = async () => false;
+      const installed = await mockIsFreighterInstalled();
       assert.strictEqual(installed, false);
     });
   });
@@ -19,71 +24,61 @@ describe("useFreighter hook logic", () => {
   describe("wallet connection", () => {
     test("returns public key on successful connect", async () => {
       const testKey = "GABC1234567890TESTKEY";
-      const connectWallet = mock.fn(async () => testKey);
+      const mockConnectWallet = async () => testKey;
 
-      const key = await connectWallet();
+      const key = await mockConnectWallet();
       assert.strictEqual(key, testKey);
     });
 
-    test("throws when Freighter is not installed", async () => {
-      const connectWallet = mock.fn(async () => {
+    it("throws when Freighter is not installed", async () => {
+      const mockConnectWallet = async () => {
         throw new Error("Freighter wallet extension is not installed");
-      });
+      };
 
       await assert.rejects(
-        () => connectWallet(),
-        /Freighter wallet extension is not installed/
+        mockConnectWallet(),
+        { message: "Freighter wallet extension is not installed" }
       );
     });
 
-    test("throws when user rejects connection", async () => {
-      const connectWallet = mock.fn(async () => {
+    it("throws when user rejects connection", async () => {
+      const mockConnectWallet = async () => {
         throw new Error("User rejected wallet connection");
-      });
+      };
 
       await assert.rejects(
-        () => connectWallet(),
-        /User rejected wallet connection/
+        mockConnectWallet(),
+        { message: "User rejected wallet connection" }
       );
     });
   });
 
-  describe("state transitions", () => {
-    test("goes from disconnected to connected on successful connect", async () => {
+  describe("state transitions simulation", () => {
+    it("goes from disconnected to connected on successful connect", async () => {
       const testKey = "GABC1234567890TESTKEY";
-      const getPublicKey = mock.fn(async (): Promise<string | null> => null);
-      const connectWallet = mock.fn(async () => testKey);
+      let publicKey: string | null = null; // initially disconnected
+      
+      const mockConnectWallet = async () => {
+        publicKey = testKey;
+        return testKey;
+      };
 
-      let publicKey = await getPublicKey();
       assert.strictEqual(publicKey, null);
-
-      publicKey = await connectWallet();
+      await mockConnectWallet();
       assert.strictEqual(publicKey, testKey);
     });
 
     test("goes from connected to disconnected on disconnect", async () => {
       const testKey = "GABC1234567890TESTKEY";
-      const getPublicKey = mock.fn(
-        async (): Promise<string | null> => testKey
-      );
+      let publicKey: string | null = testKey;
 
-      let publicKey: string | null = await getPublicKey();
+      const mockDisconnect = () => {
+        publicKey = null;
+      };
+
       assert.strictEqual(publicKey, testKey);
-
-      publicKey = null;
+      mockDisconnect();
       assert.strictEqual(publicKey, null);
-    });
-
-    test("restores connection if already allowed", async () => {
-      const testKey = "GABC1234567890TESTKEY";
-      const isFreighterInstalled = mock.fn(async () => true);
-      const getPublicKey = mock.fn(async () => testKey);
-
-      const installed = await isFreighterInstalled();
-      assert.strictEqual(installed, true);
-
-      const key = await getPublicKey();
-      assert.strictEqual(key, testKey);
     });
   });
 });

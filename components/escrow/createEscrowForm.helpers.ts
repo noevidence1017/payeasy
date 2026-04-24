@@ -55,9 +55,17 @@ export function toLedgerTimestamp(dateValue: string): number | null {
 
 export function sumRoommateShares(roommates: RoommateInputValue[]): number {
   return roommates.reduce((sum, roommate) => {
-    const amount = parsePositiveAmount(roommate.shareAmount);
-    return sum + (amount ?? 0);
+    const amount = Number(roommate.shareAmount);
+    return sum + (isNaN(amount) ? 0 : amount);
   }, 0);
+}
+
+export function calculateRemainingAmount(
+  totalRent: string,
+  roommates: RoommateInputValue[]
+): number {
+  const total = Number(totalRent) || 0;
+  return total - sumRoommateShares(roommates);
 }
 
 export function hasExactShareAllocation(
@@ -72,14 +80,11 @@ export function hasExactShareAllocation(
   return Math.abs(sumRoommateShares(roommates) - total) <= AMOUNT_TOLERANCE;
 }
 
-export function assignSupportedToken(
-  draft: EscrowFormDraft,
-  token: SupportedToken
-): EscrowFormDraft {
-  return {
-    ...draft,
-    tokenAddress: token.issuer,
-  };
+export function formatFeeEstimate(feeXlm: string | null | undefined): string {
+  if (!feeXlm) {
+    return "Fee unavailable";
+  }
+  return `Estimated network fee: ~${feeXlm} XLM`;
 }
 
 export function validateEscrowStep(

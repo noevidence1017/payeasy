@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import { SUPPORTED_TOKENS } from "../../lib/stellar/config.ts";
 
 import {
-  assignSupportedToken,
+  calculateRemainingAmount,
+  formatFeeEstimate,
   nextEscrowStep,
   previousEscrowStep,
   toLedgerTimestamp,
@@ -65,20 +66,34 @@ test("step 3 validation passes with exact allocation", () => {
   assert.equal(result.errors.length, 0);
 });
 
-test("selecting each supported token stores its issuer in form state", () => {
-  for (const token of SUPPORTED_TOKENS) {
-    const draft = assignSupportedToken(baseDraft(), token);
-    assert.equal(draft.tokenAddress, token.issuer);
-  }
+test("calculateRemainingAmount handles 3 roommates summing to total", () => {
+  const roommates = [
+    { id: "1", address: "G1", shareAmount: "300" },
+    { id: "2", address: "G2", shareAmount: "400" },
+    { id: "3", address: "G3", shareAmount: "300" },
+  ];
+  const remaining = calculateRemainingAmount("1000", roommates);
+  assert.equal(remaining, 0);
 });
 
-test("selecting USDC stores the documented Stellar testnet issuer", () => {
-  const usdc = SUPPORTED_TOKENS.find((token) => token.symbol === "USDC");
-  assert.ok(usdc);
+test("calculateRemainingAmount handles excess allocation", () => {
+  const roommates = [
+    { id: "1", address: "G1", shareAmount: "600" },
+    { id: "2", address: "G2", shareAmount: "500" },
+  ];
+  const remaining = calculateRemainingAmount("1000", roommates);
+  assert.equal(remaining, -100);
+});
 
-  const draft = assignSupportedToken(baseDraft(), usdc);
+test("formatFeeEstimate renders the fee in the review step copy", () => {
   assert.equal(
-    draft.tokenAddress,
-    "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+    formatFeeEstimate("0.00001"),
+    "Estimated network fee: ~0.00001 XLM"
   );
+});
+
+test("formatFeeEstimate falls back to 'Fee unavailable' when fee fetch fails", () => {
+  assert.equal(formatFeeEstimate(null), "Fee unavailable");
+  assert.equal(formatFeeEstimate(undefined), "Fee unavailable");
+  assert.equal(formatFeeEstimate(""), "Fee unavailable");
 });

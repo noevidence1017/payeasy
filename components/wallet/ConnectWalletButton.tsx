@@ -3,15 +3,18 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wallet, LogOut, Copy, Check, ChevronDown, ExternalLink } from "lucide-react";
+import { Wallet, LogOut, Copy, Check, ChevronDown, ExternalLink, AlertCircle } from "lucide-react";
 import { useStellarAuth } from "@/context/StellarContext";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function ConnectWalletButton() {
-  const { publicKey, isConnected, connect, disconnect, isConnecting, isFreighterInstalled } = useStellarAuth();
+  const { publicKey, isConnected, connect, disconnect, isConnecting, isFreighterInstalled, isRestoring, error } = useStellarAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [errorExpanded, setErrorExpanded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const truncatedKey = publicKey
     ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}`
@@ -30,6 +33,11 @@ export default function ConnectWalletButton() {
     setIsOpen(false);
   };
 
+  const confirmDisconnect = () => {
+    setIsOpen(false);
+    setShowConfirm(true);
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -41,22 +49,56 @@ export default function ConnectWalletButton() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (!isConnected) {
+  if (isRestoring) {
     return (
       <button
-        onClick={() => {
-          if (!isFreighterInstalled) {
-            router.push("/connect");
-          } else {
-            connect();
-          }
-        }}
-        disabled={isConnecting}
-        className="btn-primary !py-2.5 !px-5 !text-sm !rounded-lg flex items-center gap-2 group transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+        disabled
+        className="glass-button flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/10 opacity-70 cursor-not-allowed"
       >
-        <Wallet size={16} className="group-hover:rotate-12 transition-transform" />
-        {isConnecting ? "Connecting..." : "Connect Wallet"}
+        <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
+        <span className="text-sm font-medium text-white/70">Restoring session...</span>
       </button>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <button
+          onClick={() => {
+            if (!isFreighterInstalled) {
+              router.push("/connect");
+            } else {
+              connect();
+            }
+          }}
+          disabled={isConnecting}
+          className="btn-primary !py-2.5 !px-5 !text-sm !rounded-lg flex items-center gap-2 group transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+        >
+          <Wallet size={16} className="group-hover:rotate-12 transition-transform" />
+          {isConnecting ? "Connecting..." : "Connect Wallet"}
+        </button>
+
+        {error && (
+          <div className="text-right max-w-[220px]">
+            <div className="flex items-center justify-end gap-1.5">
+              <AlertCircle size={12} className="text-red-400 shrink-0" />
+              <p className="text-xs text-red-400">{error.message}</p>
+            </div>
+            <button
+              onClick={() => setErrorExpanded((v) => !v)}
+              className="text-[11px] text-dark-500 hover:text-dark-300 transition-colors mt-0.5"
+            >
+              {errorExpanded ? "Hide details" : "What does this mean?"}
+            </button>
+            {errorExpanded && (
+              <p className="text-[11px] text-dark-500 leading-relaxed mt-1 border-l border-white/10 pl-2 text-left">
+                {error.help}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -107,7 +149,7 @@ export default function ConnectWalletButton() {
               <div className="h-px bg-white/5 my-1" />
 
               <button
-                onClick={handleDisconnect}
+                onClick={confirmDisconnect}
                 className="w-full flex items-center gap-3 px-3 py-2 text-sm text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors"
               >
                 <LogOut size={16} />
@@ -117,6 +159,16 @@ export default function ConnectWalletButton() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleDisconnect}
+        title="Disconnect Wallet?"
+        description="Are you sure you want to disconnect? You'll need to reconnect to interact with your escrows."
+        confirmText="Disconnect"
+        variant="danger"
+      />
     </div>
   );
 }

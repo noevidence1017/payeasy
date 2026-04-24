@@ -16,7 +16,6 @@ import {
   BASE_FEE,
 } from "@stellar/stellar-sdk";
 import freighterApi from "@stellar/freighter-api";
-
 const { getAddress, signTransaction } = freighterApi;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
