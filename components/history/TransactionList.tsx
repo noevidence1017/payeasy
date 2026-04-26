@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import TransactionCard, { type Transaction } from "./TransactionCard";
 import DateRangeFilter from "./DateRangeFilter";
-import { Search, Filter, ArrowRight, ArrowLeft } from "lucide-react";
+import TypeFilter, { type TypeFilterValue } from "./TypeFilter";
+import { Search, ArrowRight, ArrowLeft } from "lucide-react";
 
 interface TransactionListProps {
   /**
@@ -23,7 +24,7 @@ function toLocalDate(iso: string): Date {
 
 /**
  * A container component for displaying a filtered and paginated list of transactions.
- * Features search, date-range filter, and pagination UI.
+ * Features search, date-range filter, type filter, and pagination UI.
  */
 export default function TransactionList({ initialTransactions }: TransactionListProps) {
   const [page, setPage] = useState(1);
@@ -32,8 +33,9 @@ export default function TransactionList({ initialTransactions }: TransactionList
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [typeFilter, setTypeFilter] = useState<TypeFilterValue>("all");
 
-  // ── Filtering ─────────────────────────────────────────────
+  // ── Combined Filtering ─────────────────────────────────────
   const filteredTransactions = useMemo(() => {
     return initialTransactions.filter((tx) => {
       // Text search
@@ -42,6 +44,9 @@ export default function TransactionList({ initialTransactions }: TransactionList
         tx.txHash.toLowerCase().includes(searchQuery.toLowerCase()) ||
         tx.amount.toLowerCase().includes(searchQuery.toLowerCase()) ||
         tx.type.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Type filter
+      const matchesType = typeFilter === "all" || tx.type === typeFilter;
 
       // Date range
       let matchesDate = true;
@@ -61,9 +66,9 @@ export default function TransactionList({ initialTransactions }: TransactionList
         }
       }
 
-      return matchesSearch && matchesDate;
+      return matchesSearch && matchesType && matchesDate;
     });
-  }, [initialTransactions, searchQuery, dateFrom, dateTo]);
+  }, [initialTransactions, searchQuery, typeFilter, dateFrom, dateTo]);
 
   const isDateFilterActive = dateFrom !== "" || dateTo !== "";
 
@@ -85,7 +90,7 @@ export default function TransactionList({ initialTransactions }: TransactionList
     <div className="space-y-6">
       {/* List Control Header */}
       <div className="flex flex-col gap-4 mb-10 bg-white/5 border border-white/5 p-4 rounded-2xl backdrop-blur-md">
-        {/* Row 1: Search + existing buttons */}
+        {/* Row 1: Search + type filter + existing buttons */}
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
           <div className="relative w-full md:w-96 group">
             <label htmlFor="tx-search" className="sr-only">Search transactions</label>
@@ -104,10 +109,12 @@ export default function TransactionList({ initialTransactions }: TransactionList
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <button className="flex-1 md:flex-none btn-secondary !py-2.5 !px-4 !text-xs !bg-dark-900/40 !border-white/10 hover:!border-white/20">
-              <Filter className="h-3.5 w-3.5" />
-              Types
-            </button>
+            <div className="flex-1 md:flex-none md:w-44">
+              <TypeFilter
+                value={typeFilter}
+                onChange={(v) => { setTypeFilter(v); setPage(1); }}
+              />
+            </div>
             <button className="flex-1 md:flex-none btn-secondary !py-2.5 !px-4 !text-xs !bg-dark-900/40 !border-white/10 hover:!border-white/20">
               Latest First
             </button>
@@ -142,17 +149,29 @@ export default function TransactionList({ initialTransactions }: TransactionList
           </div>
           <h3 className="text-dark-200 font-bold">No transactions found</h3>
           <p className="text-dark-500 text-sm mt-1">
-            {isDateFilterActive
-              ? "No transactions match the selected date range"
+            {isDateFilterActive || typeFilter !== "all"
+              ? "No transactions match the selected filters"
               : "Try adjusting your search criteria"}
           </p>
-          {isDateFilterActive && (
-            <button
-              onClick={handleClearDates}
-              className="mt-4 text-brand-400 text-sm font-bold hover:text-brand-300 transition-colors"
-            >
-              Clear date filter
-            </button>
+          {(isDateFilterActive || typeFilter !== "all") && (
+            <div className="mt-4 flex gap-3 justify-center">
+              {isDateFilterActive && (
+                <button
+                  onClick={handleClearDates}
+                  className="text-brand-400 text-sm font-bold hover:text-brand-300 transition-colors"
+                >
+                  Clear date filter
+                </button>
+              )}
+              {typeFilter !== "all" && (
+                <button
+                  onClick={() => setTypeFilter("all")}
+                  className="text-brand-400 text-sm font-bold hover:text-brand-300 transition-colors"
+                >
+                  Clear type filter
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
