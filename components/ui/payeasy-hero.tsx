@@ -71,7 +71,7 @@ export function PayEasyHero({
   return (
     <section
       className={cn(
-        "relative w-full min-h-screen flex flex-col overflow-hidden",
+        "relative w-full min-h-[100svh] flex flex-col overflow-hidden",
         className
       )}
       style={{

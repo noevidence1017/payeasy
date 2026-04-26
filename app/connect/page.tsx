@@ -187,12 +187,12 @@ export default function ConnectWalletPage() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-                className="mb-8 p-5 rounded-2xl glass-card"
+                className="mb-8 landscape:mb-4 p-5 landscape:p-3 rounded-2xl glass-card"
                 style={{
                   boxShadow: "0 0 40px rgba(92,124,250,0.15)",
                 }}
               >
-                <Wallet className="w-10 h-10 text-brand-400" />
+                <Wallet className="w-10 h-10 landscape:w-7 landscape:h-7 text-brand-400" />
               </motion.div>
 
               {/* Heading */}
@@ -486,8 +486,8 @@ export default function ConnectWalletPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-sm text-dark-200 bg-dark-950/60 rounded-xl px-4 py-3 font-mono truncate border border-white/5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <code className="flex-1 min-w-0 text-sm text-dark-200 bg-dark-950/60 rounded-xl px-4 py-3 font-mono truncate border border-white/5">
                     {publicKey}
                   </code>
                   <button
@@ -537,7 +537,7 @@ export default function ConnectWalletPage() {
               )}
 
               {/* Action buttons */}
-              <div className="w-full grid grid-cols-2 gap-3 mt-6">
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
                 <Link
                   href="/escrow/create"
                   className="btn-primary !justify-center !rounded-xl !py-3.5 text-sm"
