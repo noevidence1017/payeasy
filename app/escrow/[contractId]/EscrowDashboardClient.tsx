@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import EscrowStatus from "@/components/escrow/EscrowStatus";
 import FundingProgress from "@/components/escrow/FundingProgress";
 import MultiSigApproval from "@/components/escrow/MultiSigApproval";
-import RoommateList from "@/components/escrow/RoommateList";
+import RoommateTable from "@/components/escrow/RoommateTable";
+import ContributeForm from "@/components/escrow/ContributeForm";
 import EscrowDashboardSkeleton from "@/components/escrow/EscrowDashboardSkeleton";
 import TransactionReview from "@/components/wallet/TransactionReview";
 import {
@@ -27,12 +28,20 @@ import { claimRefund, stroopsToXlm } from "@/lib/stellar/actions/claimRefund";
 import useContractPolling from "@/hooks/useContractPolling";
 import { buildReleaseXdr, signAndSubmitRelease } from "@/lib/stellar/actions/release";
 import { useToast } from "@/hooks/useToast";
+import CopyButton from "@/components/ui/copy-button";
+import { DeadlineCountdown } from "@/components/escrow/DeadlineCountdown";
 
 interface Props {
   contractId: string;
 }
 
 type ReleasePhase = "idle" | "building" | "review" | "submitting";
+
+function formatContractId(contractId: string): string {
+  if (contractId.length <= 10) return contractId;
+  return `${contractId.slice(0, 4)}...${contractId.slice(-4)}`;
+}
+
 
 export default function EscrowDashboardClient({ contractId }: Props) {
   const { contractState, isLoading, error, refresh } = useContractPolling(contractId);
@@ -53,6 +62,33 @@ export default function EscrowDashboardClient({ contractId }: Props) {
   const currentRoommate = contractState?.roommates.find(
     (r) => r.address === publicKey
   );
+
+  // #550 — memoize derived values so they don't recompute on unrelated state changes.
+  const totalFunded = useMemo(
+    () =>
+      contractState
+        ? contractState.roommates.reduce(
+            (sum, r) => sum + Number(r.paidAmount),
+            0
+          )
+        : 0,
+    [contractState]
+  );
+
+  const fundingPercentage = useMemo(() => {
+    if (!contractState || Number(contractState.totalRent) === 0) return 0;
+    return Math.min(
+      100,
+      (totalFunded / Number(contractState.totalRent)) * 100
+    );
+  }, [contractState, totalFunded]);
+
+  const roommateStatusMap = useMemo(() => {
+    if (!contractState) return new Map<string, boolean>();
+    return new Map(
+      contractState.roommates.map((r) => [r.address, r.isPaid])
+    );
+  }, [contractState]);
 
   const nowEpoch = Math.floor(Date.now() / 1000);
   const isDeadlinePassed =
@@ -130,8 +166,10 @@ export default function EscrowDashboardClient({ contractId }: Props) {
       })
     : null;
 
+  const truncatedContractId = formatContractId(contractId);
+
   return (
-    <main id="main-content" className="min-h-screen pt-32 pb-24 relative overflow-hidden bg-[#07070a]">
+    <main id="main-content" aria-label="Escrow Dashboard" className="min-h-screen pt-32 pb-24 relative overflow-hidden bg-[#07070a]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(92,124,250,0.1),transparent_50%)] pointer-events-none" />
       <div className="mesh-gradient opacity-30 mix-blend-screen pointer-events-none fixed inset-0 saturate-150" />
 
@@ -172,14 +210,16 @@ export default function EscrowDashboardClient({ contractId }: Props) {
             </div>
             <div className="flex items-center gap-3">
               <p className="text-[10px] text-dark-500 font-black uppercase tracking-widest truncate max-w-[140px] md:max-w-none font-mono">
-                CX: {contractId}
+                CX: {truncatedContractId}
               </p>
+              <CopyButton value={contractId} label="Copy full contract ID" />
               <a
                 href={getExplorerLink("contract", contractId)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1.5 rounded-lg text-dark-500 hover:text-brand-400 hover:bg-white/5 transition-all outline-none"
                 title="View on Stellar Expert"
+                aria-label="View on Stellar Expert"
               >
                 <ExternalLink className="h-4 w-4" />
               </a>
@@ -205,7 +245,10 @@ export default function EscrowDashboardClient({ contractId }: Props) {
               <span className="text-white font-black italic">Stellar Ledger</span>.
             </p>
             <div className="h-16 w-px bg-gradient-to-b from-white/10 via-white/5 to-transparent hidden md:block" />
-            <RefreshIndicator onRefresh={refresh} />
+            <div className="flex flex-wrap items-center gap-6">
+              <DeadlineCountdown deadlineEpoch={contractState?.deadlineEpoch || 0} />
+              <RefreshIndicator onRefresh={refresh} />
+            </div>
           </div>
         </header>
 
@@ -254,7 +297,7 @@ export default function EscrowDashboardClient({ contractId }: Props) {
                     <button
                       onClick={() => void handleReleaseFunds()}
                       disabled={releasePhase !== "idle"}
-                      className="inline-flex items-center gap-2 self-start btn-primary !py-3 !px-6 !rounded-xl font-black uppercase tracking-widest shadow-lg shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-2 w-full sm:w-auto justify-center btn-primary !py-3 !px-6 !rounded-xl font-black uppercase tracking-widest shadow-lg shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {releasePhase === "building" ? (
                         <>
@@ -296,7 +339,21 @@ export default function EscrowDashboardClient({ contractId }: Props) {
                 </div>
               </div>
 
-              <RoommateList roommates={contractState!.roommates} />
+              <RoommateTable roommates={contractState!.roommates} />
+
+              {/* Contribute Form — visible only to the current roommate if they haven't paid full share */}
+              {currentRoommate && !currentRoommate.isPaid && contractState?.status !== "funded" && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                  <ContributeForm
+                    escrowId={contractId}
+                    expectedShare={currentRoommate.expectedShare}
+                    remainingBalance={(
+                      Number(currentRoommate.expectedShare) - Number(currentRoommate.paidAmount)
+                    ).toFixed(2).replace(/\.00$/, "")}
+                    onSuccess={() => void refresh()}
+                  />
+                </div>
+              )}
 
               {/* Claim Refund — visible only when eligible */}
               {showClaimRefundButton && (
@@ -312,7 +369,7 @@ export default function EscrowDashboardClient({ contractId }: Props) {
                   <button
                     onClick={() => void handleClaimRefund()}
                     disabled={isClaimingRefund}
-                    className="btn-primary !py-3 !px-8 !rounded-xl font-black uppercase tracking-widest flex items-center gap-2 shrink-0 disabled:opacity-50"
+                    className="btn-primary !w-full sm:!w-auto !justify-center !py-3 !px-8 !rounded-xl font-black uppercase tracking-widest flex items-center gap-2 shrink-0 disabled:opacity-50"
                   >
                     {isClaimingRefund ? (
                       <>

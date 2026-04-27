@@ -27,6 +27,7 @@ import { isOnboarded, markOnboarded } from "@/components/ui/onboarding-card.help
 import FundTestnetButton from "@/components/wallet/FundTestnetButton";
 import { getFreighterNetwork, isFreighterVersionSupported } from "@/lib/stellar/wallet";
 import { getCurrentNetwork } from "@/lib/stellar/config";
+import CopyButton from "@/components/ui/copy-button";
 
 const FEATURES = [
   {
@@ -130,7 +131,7 @@ export default function ConnectWalletPage() {
 
 
   return (
-    <main id="main-content" className="relative min-h-screen flex flex-col items-center justify-center px-4 py-12 overflow-hidden">
+    <main id="main-content" aria-label="Connect Wallet" className="relative min-h-screen flex flex-col items-center justify-center px-4 py-12 overflow-hidden">
       {/* Background effects */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <div
@@ -187,12 +188,12 @@ export default function ConnectWalletPage() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-                className="mb-8 p-5 rounded-2xl glass-card"
+                className="mb-8 landscape:mb-4 p-5 landscape:p-3 rounded-2xl glass-card"
                 style={{
                   boxShadow: "0 0 40px rgba(92,124,250,0.15)",
                 }}
               >
-                <Wallet className="w-10 h-10 text-brand-400" />
+                <Wallet className="w-10 h-10 landscape:w-7 landscape:h-7 text-brand-400" />
               </motion.div>
 
               {/* Heading */}
@@ -486,21 +487,16 @@ export default function ConnectWalletPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-sm text-dark-200 bg-dark-950/60 rounded-xl px-4 py-3 font-mono truncate border border-white/5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <code className="flex-1 min-w-0 text-sm text-dark-200 bg-dark-950/60 rounded-xl px-4 py-3 font-mono truncate border border-white/5">
                     {publicKey}
                   </code>
-                  <button
-                    onClick={handleCopy}
-                    className="p-3 rounded-xl glass hover:bg-white/10 transition-colors shrink-0"
-                    title="Copy address"
-                  >
-                    {copied ? (
-                      <Check size={18} className="text-accent-400" />
-                    ) : (
-                      <Copy size={18} className="text-dark-400" />
-                    )}
-                  </button>
+                  <CopyButton 
+                    value={publicKey} 
+                    label="Copy wallet address" 
+                    iconSize={18} 
+                    className="!p-3 rounded-xl glass hover:bg-white/10 transition-colors shrink-0" 
+                  />
                   <a
                     href={getExplorerLink("account", publicKey)}
                     target="_blank"
@@ -537,7 +533,7 @@ export default function ConnectWalletPage() {
               )}
 
               {/* Action buttons */}
-              <div className="w-full grid grid-cols-2 gap-3 mt-6">
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
                 <Link
                   href="/escrow/create"
                   className="btn-primary !justify-center !rounded-xl !py-3.5 text-sm"
