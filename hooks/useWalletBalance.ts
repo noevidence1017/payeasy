@@ -83,7 +83,6 @@ export function useWalletBalance(publicKey: string | null, enabled = false) {
     setState({ balance: null, isLoading: true, error: null });
     try {
       const raw = await fetchXlmBalance(publicKey, "testnet");
-      // Format as "1,234.56"
       const num = parseFloat(raw);
       const formatted = num.toLocaleString("en-US", {
         minimumFractionDigits: 2,
