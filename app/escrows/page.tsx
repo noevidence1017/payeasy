@@ -4,13 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Wallet, Clock, ArrowRight, ShieldCheck, AlertCircle } from "lucide-react";
-import { useWalletConnection } from "@/hooks/useWalletConnection";
-import { useWallet } from "@/hooks/useWallet";
+import { useStellarAuth } from "@/context/StellarContext";
 import { getUserEscrows, type ContractState } from "@/lib/stellar/queries";
 
 export default function EscrowsPage() {
   const router = useRouter();
-  const { isConnected, publicKey } = useWalletConnection();
+  const { isConnected, publicKey } = useStellarAuth();
   const [escrows, setEscrows] = useState<ContractState[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
