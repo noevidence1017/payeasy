@@ -13,7 +13,7 @@ import {
   type ParsedTransaction,
   type TransactionHistoryPager,
 } from "@/lib/stellar/history";
-import useTransactionPolling from "@/hooks/useTransactionPolling";
+import { getNewTransactionsByHash, useHorizonStream } from "@/hooks/useTransactionPolling";
 import EmptyState from "@/components/ui/empty-state";
 import { History } from "lucide-react";
 
@@ -79,6 +79,7 @@ export default function HistoryClient() {
 
   const pagerRef = useRef<TransactionHistoryPager | null>(null);
   const fadeTimersRef = useRef<Record<string, number>>({});
+  const transactionsRef = useRef<Transaction[]>([]);
 
   const horizonClient = useMemo(() => createHorizonClient(), []);
 
@@ -178,19 +179,29 @@ export default function HistoryClient() {
     }
   }, [hasMore, publicKey]);
 
-  useTransactionPolling<Transaction>({
-    enabled: isConnected && Boolean(publicKey),
-    currentTransactions: transactions,
-    fetchLatest: fetchLatestPage,
-    onNewTransactions: (newTransactions) => {
-      setTransactions((prev) => [...newTransactions, ...prev]);
-      markAsNew(newTransactions);
-      setIsPollingError(false);
+  // Keep transactionsRef in sync so the SSE callback never reads a stale closure.
+  useEffect(() => {
+    transactionsRef.current = transactions;
+  }, [transactions]);
+
+  // Subscribe to Horizon SSE stream; prepend new transactions as they arrive.
+  useHorizonStream({
+    accountId: isConnected && publicKey ? publicKey : null,
+    onNewTransaction: () => {
+      void fetchLatestPage()
+        .then((latest) => {
+          const newOnes = getNewTransactionsByHash(transactionsRef.current, latest);
+          if (newOnes.length > 0) {
+            setTransactions((prev) => [...newOnes, ...prev]);
+            markAsNew(newOnes);
+            setIsPollingError(false);
+          }
+        })
+        .catch(() => setIsPollingError(true));
     },
-    intervalMs: 15_000,
   });
 
-  // Keep polling resilient; errors do not block the page.
+  // Keep updates resilient; unhandled promise rejections do not block the page.
   useEffect(() => {
     const listener = (event: PromiseRejectionEvent) => {
       if (String(event.reason ?? "").toLowerCase().includes("history")) {
