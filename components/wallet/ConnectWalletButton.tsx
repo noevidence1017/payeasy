@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wallet, LogOut, Copy, Check, ChevronDown, ExternalLink, AlertCircle, Loader2, Coins, AlertTriangle, Maximize2, Minimize2 } from "lucide-react";
+import { Wallet, LogOut, Copy, ChevronDown, ExternalLink, AlertCircle, Loader2, Coins, AlertTriangle, Maximize2, Minimize2 } from "lucide-react";
 import { useStellarAuth } from "@/context/StellarContext";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -31,7 +31,6 @@ function toDisplayNetworkName(network: "TESTNET" | "MAINNET"): string {
 export default function ConnectWalletButton() {
   const { publicKey, isConnected, connect, disconnect, isConnecting, isFreighterInstalled, isRestoring, error } = useStellarAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [errorExpanded, setErrorExpanded] = useState(false);
   const { balance, isLoading: isBalanceLoading } = useWalletBalance(publicKey, isOpen);
   const [walletNetwork, setWalletNetwork] = useState<"TESTNET" | "MAINNET" | null>(null);
@@ -57,13 +56,6 @@ export default function ConnectWalletButton() {
     ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}`
     : "";
 
-  const handleCopy = async () => {
-    if (publicKey) {
-      await navigator.clipboard.writeText(publicKey);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
 
   const handleDisconnect = () => {
     disconnect();
