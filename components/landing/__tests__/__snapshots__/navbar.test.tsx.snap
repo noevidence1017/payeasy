@@ -1,0 +1,128 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Navbar > matches snapshot 1`] = `
+<nav
+  class="fixed top-0 left-0 right-0 z-50 transition-all duration-500 bg-transparent py-5"
+>
+  <div
+    class="max-w-7xl mx-auto px-6 flex items-center justify-between"
+  >
+    <a
+      class="flex items-center gap-2 group"
+      href="/"
+    >
+      <div
+        class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center transition-transform group-hover:scale-110"
+      >
+        <span
+          class="text-white font-bold text-lg"
+        >
+          P
+        </span>
+      </div>
+      <span
+        class="text-xl font-bold text-white tracking-tight"
+      >
+        Pay
+        <span
+          class="gradient-text"
+        >
+          Easy
+        </span>
+      </span>
+    </a>
+    <div
+      class="hidden md:flex items-center gap-8"
+    >
+      <a
+        class="text-dark-400 hover:text-white transition-colors duration-300 text-sm font-medium"
+        href="#features"
+      >
+        Features
+      </a>
+      <a
+        class="text-dark-400 hover:text-white transition-colors duration-300 text-sm font-medium"
+        href="#how-it-works"
+      >
+        How It Works
+      </a>
+      <a
+        class="text-dark-400 hover:text-white transition-colors duration-300 text-sm font-medium"
+        href="#stellar"
+      >
+        Stellar
+      </a>
+    </div>
+    <div
+      class="hidden md:flex items-center gap-3"
+    >
+      <a
+        class="btn-secondary !py-2.5 !px-5 !text-sm !rounded-lg"
+        href="#"
+      >
+        Sign In
+      </a>
+      <button
+        class="btn-primary !py-2.5 !px-5 !text-sm !rounded-lg flex items-center gap-2 group transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+      >
+        <svg
+          class="lucide lucide-wallet group-hover:rotate-12 transition-transform"
+          fill="none"
+          height="16"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="16"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"
+          />
+          <path
+            d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"
+          />
+        </svg>
+        Connect Wallet
+      </button>
+    </div>
+    <button
+      aria-label="Toggle menu"
+      class="md:hidden text-white p-2"
+    >
+      <svg
+        class="lucide lucide-menu"
+        fill="none"
+        height="24"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <line
+          x1="4"
+          x2="20"
+          y1="12"
+          y2="12"
+        />
+        <line
+          x1="4"
+          x2="20"
+          y1="6"
+          y2="6"
+        />
+        <line
+          x1="4"
+          x2="20"
+          y1="18"
+          y2="18"
+        />
+      </svg>
+    </button>
+  </div>
+</nav>
+`;
